@@ -22,29 +22,14 @@ module "instance_group" {
   vpc_zone_identifiers = [module.lb_network_setup.virtual_subnet_ids[0]]
   availability_zone = "${var.aws_region}a"
 }
-moved {
-  from = aws_instance.temp_vm
-  to = module.instance_group.aws_instance.temp_vm
-}
-moved {
-  from = aws_ami_from_instance.apache2
-  to = module.instance_group.aws_ami_from_instance.apache2
-}
-moved {
-  from = aws_launch_template.autoscale_template
-  to = module.instance_group.aws_launch_template.autoscale_template
-}
-moved {
-  from = aws_autoscaling_group.autoscale_group
-  to = module.instance_group.aws_autoscaling_group.autoscale_group
-}
+
 
 data "aws_instances" "instances_in_subnet" {
   filter {
     name   = "subnet-id"
-    values = [module.lb_network_setup.virtual_subnet_ids[0]] #[aws_subnet.instance_subnet1.id]
+    values = [module.lb_network_setup.virtual_subnet_ids[0]]
   }
-  depends_on = [module.instance_group.autoscale_group] #[ aws_autoscaling_group.autoscale_group ]
+  depends_on = [module.instance_group.autoscale_group]
 }
 
 # output "instance_ids" {
