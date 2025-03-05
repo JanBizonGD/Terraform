@@ -72,40 +72,7 @@ resource "aws_instance" "temp_vm" {
               EOF
   availability_zone = "${var.aws_region}a"
 }
-# resource "aws_ebs_volume" "volume" {
-#   availability_zone = "${var.aws_region}a"
-#   size              = 8
-# }
 
-# ====================================
-# data "aws_ebs_volume" "ebs_volume" {
-#   most_recent = true
-
-#   filter {
-#     name   = "attachment.instance-id"
-#     values = ["${aws_instance.temp_vm.id}"]
-#   }
-# }
-
-# resource "aws_ebs_snapshot" "snapshot" {
-#   volume_id = data.aws_ebs_volume.ebs_volume.id #aws_ebs_volume.volume.id
-# }
-
-# resource "aws_ami" "server_image" {
-#   name                = "server_image"
-#   virtualization_type = "hvm"
-#   boot_mode           = "uefi-preferred" # if is not present it forces replacment of ami
-#   ena_support = true
-#   root_device_name = "/dev/sda1"
-#   ebs_block_device {
-#     device_name = "/dev/sda1"
-#     snapshot_id = aws_ebs_snapshot.snapshot.id
-#     volume_size = 8
-#   }
-#   tags = {
-#     Name = "ServerImage"
-#   }
-# }
 resource "aws_ami_from_instance" "apache2" {
   name               = "terraform-apache2"
   source_instance_id = aws_instance.temp_vm.id

@@ -13,7 +13,7 @@ terraform validate
 ```
 Then:
 ```
-terraform apply -target ""
+terraform apply -target "data.aws_instances.instances_in_subnet"
 ```
 Then:
 ```
@@ -27,3 +27,7 @@ After last apply there should be dns URL of loadbalancer.
 ## Warning
 First connection to loadbalancer may last a little bit longer.
 
+## Clean up
+```
+terraform destory
+```
