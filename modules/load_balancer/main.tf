@@ -4,6 +4,7 @@ provider "aws" {
   region = var.region
 }
 
+# === Load balancer ================================
 resource "aws_lb" "loadbalancer" {
   name               = var.name
   internal           = false # no internet gateway error if false
@@ -12,6 +13,7 @@ resource "aws_lb" "loadbalancer" {
   subnets            = var.subnets 
 }
 
+# === Load balancer resources ================================
 resource "aws_lb_target_group" "app_target_group" {
   name        = "app-target-group"
   port        = 80
@@ -27,7 +29,6 @@ resource "aws_lb_target_group" "app_target_group" {
     unhealthy_threshold = 2
   }
 }
-
 resource "aws_lb_listener" "http_listener" {
   load_balancer_arn = aws_lb.loadbalancer.arn
   port              = "80"
@@ -38,7 +39,6 @@ resource "aws_lb_listener" "http_listener" {
     target_group_arn = aws_lb_target_group.app_target_group.arn
   }
 }
-
 resource "aws_lb_target_group_attachment" "asg_attachment" {
   depends_on = [ var.instances ]
   count = length(var.instances)

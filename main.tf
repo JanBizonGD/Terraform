@@ -13,10 +13,12 @@ provider "aws" {
   region = var.aws_region
 }
 
+# === Output =================================
 output "load_balancer_url" {
   value = module.load_balancer.load_balancer_url
 }
 
+# === Modules =================================
 module "lb_network_setup" {
   source = "./modules/lb_network_setup"
 }
@@ -34,6 +36,7 @@ module "load_balancer" {
   instances = data.aws_instances.instances_in_subnet.ids
 }
 
+# === List instances in subnet =================================
 data "aws_instances" "instances_in_subnet" {
   filter {
     name   = "subnet-id"
@@ -42,6 +45,7 @@ data "aws_instances" "instances_in_subnet" {
   depends_on = [module.instance_group.autoscale_group]
 }
 
+# === Security group =================================
 resource "aws_security_group" "lb_sg" {
   name        = "lb-security-group"
   description = "Allow HTTP traffic"
@@ -63,4 +67,3 @@ resource "aws_vpc_security_group_egress_rule" "lb_sq_egress" {
   ip_protocol    = "-1"
   cidr_ipv4 = "0.0.0.0/0"
 }
-
