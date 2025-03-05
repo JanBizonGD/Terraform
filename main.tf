@@ -17,36 +17,6 @@ module "lb_network_setup" {
   source = "./modules/lb_network_setup"
 }
 
-moved {
-  from = aws_vpc.autoscale_vpc
-  to = module.lb_network_setup.aws_vpc.this
-}
-moved {
-  from = aws_subnet.instance_subnet1
-  to = module.lb_network_setup.aws_subnet.this
-}
-moved {
-  from = aws_subnet.instance_subnet2
-  to = module.lb_network_setup.aws_subnet.this2
-}
-moved {
-  from = aws_internet_gateway.gw
-  to = module.lb_network_setup.aws_internet_gateway.this
-}
-moved {
-  from = aws_route_table.default_route
-  to = module.lb_network_setup.aws_route_table.default_route
-}
-moved {
-  from = aws_route.internet_access
-  to = module.lb_network_setup.aws_route.internet_access
-}
-moved {
-  from = aws_route_table_association.route_assos
-  to = module.lb_network_setup.aws_route_table_association.this
-}
-
-
 resource "aws_instance" "temp_vm" {
   ami           = "ami-04b4f1a9cf54c11d0" # Linux/ubuntu
   instance_type = var.instance_type
