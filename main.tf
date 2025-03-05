@@ -13,6 +13,10 @@ provider "aws" {
   region = var.aws_region
 }
 
+output "load_balancer_url" {
+  value = module.load_balancer.load_balancer_url
+}
+
 module "lb_network_setup" {
   source = "./modules/lb_network_setup"
 }
@@ -37,22 +41,6 @@ data "aws_instances" "instances_in_subnet" {
   }
   depends_on = [module.instance_group.autoscale_group]
 }
-moved {
-  from = aws_lb.loadbalancer
-  to = module.load_balancer.aws_lb.loadbalancer
-}
-moved {
-  from = aws_lb_target_group.app_target_group
-  to = module.load_balancer.aws_lb_target_group.app_target_group
-}
-moved {
-  from = aws_lb_listener.http_listener
-  to = module.load_balancer.aws_lb_listener.http_listener
-}
-moved {
-  from = aws_lb_target_group_attachment.asg_attachment
-  to = module.load_balancer.aws_lb_target_group_attachment.asg_attachment
-}
 
 resource "aws_security_group" "lb_sg" {
   name        = "lb-security-group"
@@ -74,9 +62,5 @@ resource "aws_vpc_security_group_egress_rule" "lb_sq_egress" {
   to_port     = -1
   ip_protocol    = "-1"
   cidr_ipv4 = "0.0.0.0/0"
-}
-
-output "load_balancer_url" {
-  value = module.load_balancer.load_balancer_url
 }
 
