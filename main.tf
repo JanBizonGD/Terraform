@@ -16,55 +16,27 @@ provider "aws" {
 module "lb_network_setup" {
   source = "./modules/lb_network_setup"
 }
-
-resource "aws_instance" "temp_vm" {
-  ami           = "ami-04b4f1a9cf54c11d0" # Linux/ubuntu
-  instance_type = var.instance_type
-  tags = {
-    Name = "TemporaryVM"
-  }
-  user_data = <<-EOF
-              #!/bin/bash
-              sudo apt install -y apache2
-              echo "<html><body><h1>Server: $(hostname)</h1></body></html>" > /var/www/html/index.html
-              sudo service apache2 start
-              EOF
+module "instance_group" {
+  source = "./modules/instance_group"
+  security_groups = [aws_security_group.lb_sg.id]
+  vpc_zone_identifiers = [module.lb_network_setup.virtual_subnet_ids[0]]
   availability_zone = "${var.aws_region}a"
 }
-
-resource "aws_ami_from_instance" "apache2" {
-  name               = "terraform-apache2"
-  source_instance_id = aws_instance.temp_vm.id
+moved {
+  from = aws_instance.temp_vm
+  to = module.instance_group.aws_instance.temp_vm
 }
-# ================================
-
-resource "aws_launch_template" "autoscale_template" {
-  image_id        = aws_ami_from_instance.apache2.id #aws_ami.server_image.id
-  instance_type  = var.instance_type
-  user_data      = filebase64("./startup.sh")
-  placement {
-    availability_zone = "${var.aws_region}a"
-  }
-  vpc_security_group_ids = [aws_security_group.lb_sg.id] # Propably - makes instances avalaibe for loadbalancer
+moved {
+  from = aws_ami_from_instance.apache2
+  to = module.instance_group.aws_ami_from_instance.apache2
 }
-
-resource "aws_autoscaling_group" "autoscale_group" {
-  desired_capacity     = 3
-  max_size             = 3
-  min_size             = 3
- # launch_configuration = aws_launch_configuration.app_launch_config.id
-  mixed_instances_policy {
-    launch_template {
-      launch_template_specification {
-        launch_template_id = aws_launch_template.autoscale_template.id
-      }
-    }
-  }
-
-  vpc_zone_identifier  = [module.lb_network_setup.virtual_subnet_ids[0]] #[aws_subnet.instance_subnet1.id]
-
-  health_check_type   = "EC2"
-  health_check_grace_period = 300
+moved {
+  from = aws_launch_template.autoscale_template
+  to = module.instance_group.aws_launch_template.autoscale_template
+}
+moved {
+  from = aws_autoscaling_group.autoscale_group
+  to = module.instance_group.aws_autoscaling_group.autoscale_group
 }
 
 data "aws_instances" "instances_in_subnet" {
@@ -72,7 +44,7 @@ data "aws_instances" "instances_in_subnet" {
     name   = "subnet-id"
     values = [module.lb_network_setup.virtual_subnet_ids[0]] #[aws_subnet.instance_subnet1.id]
   }
-  depends_on = [ aws_autoscaling_group.autoscale_group ]
+  depends_on = [module.instance_group.autoscale_group] #[ aws_autoscaling_group.autoscale_group ]
 }
 
 # output "instance_ids" {
