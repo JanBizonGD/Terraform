@@ -13,50 +13,39 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "aws_vpc" "autoscale_vpc" {
-    cidr_block = "10.0.0.0/16"
+module "lb_network_setup" {
+  source = "./modules/lb_network_setup"
 }
 
-resource "aws_subnet" "instance_subnet1" {
-  vpc_id     = aws_vpc.autoscale_vpc.id
-  cidr_block = "10.0.1.0/24"
-  availability_zone = "${var.aws_region}a"
+moved {
+  from = aws_vpc.autoscale_vpc
+  to = module.lb_network_setup.aws_vpc.this
 }
-resource "aws_subnet" "instance_subnet2" {
-  vpc_id     = aws_vpc.autoscale_vpc.id
-  cidr_block = "10.0.2.0/24"
-  availability_zone = "${var.aws_region}b"
+moved {
+  from = aws_subnet.instance_subnet1
+  to = module.lb_network_setup.aws_subnet.this
 }
-resource "aws_internet_gateway" "gw" {
-  vpc_id = aws_vpc.autoscale_vpc.id
+moved {
+  from = aws_subnet.instance_subnet2
+  to = module.lb_network_setup.aws_subnet.this2
 }
-
-# ======================================
-
-# Create a Route Table
-resource "aws_route_table" "default_route" {
-  vpc_id = aws_vpc.autoscale_vpc.id
+moved {
+  from = aws_internet_gateway.gw
+  to = module.lb_network_setup.aws_internet_gateway.this
 }
-
-# Add a Route to the Route Table for Internet access
-resource "aws_route" "internet_access" {
-  route_table_id         = aws_route_table.default_route.id
-  destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.gw.id
+moved {
+  from = aws_route_table.default_route
+  to = module.lb_network_setup.aws_route_table.default_route
 }
-
-# Associate the Route Table with a Subnet
-resource "aws_route_table_association" "route_assos" {
-  subnet_id      = aws_subnet.instance_subnet1.id
-  route_table_id = aws_route_table.default_route.id
+moved {
+  from = aws_route.internet_access
+  to = module.lb_network_setup.aws_route.internet_access
+}
+moved {
+  from = aws_route_table_association.route_assos
+  to = module.lb_network_setup.aws_route_table_association.this
 }
 
-# =================================
-# resource "aws_volume_attachment" "ebs_att" {
-#   device_name = "/dev/sda1"
-#   volume_id   = aws_ebs_volume.volume.id
-#   instance_id = aws_instance.temp_vm.id
-# }
 
 resource "aws_instance" "temp_vm" {
   ami           = "ami-04b4f1a9cf54c11d0" # Linux/ubuntu
@@ -102,7 +91,7 @@ resource "aws_autoscaling_group" "autoscale_group" {
     }
   }
 
-  vpc_zone_identifier  = [aws_subnet.instance_subnet1.id]
+  vpc_zone_identifier  = [module.lb_network_setup.virtual_subnet_ids[0]] #[aws_subnet.instance_subnet1.id]
 
   health_check_type   = "EC2"
   health_check_grace_period = 300
@@ -111,11 +100,7 @@ resource "aws_autoscaling_group" "autoscale_group" {
 data "aws_instances" "instances_in_subnet" {
   filter {
     name   = "subnet-id"
-    values = [aws_subnet.instance_subnet1.id]
-  }
-  filter {
-    name   = "subnet-id"
-    values = [aws_subnet.instance_subnet1.id]
+    values = [module.lb_network_setup.virtual_subnet_ids[0]] #[aws_subnet.instance_subnet1.id]
   }
   depends_on = [ aws_autoscaling_group.autoscale_group ]
 }
@@ -129,14 +114,14 @@ resource "aws_lb" "loadbalancer" {
   internal           = false # no internet gateway error if false
   load_balancer_type = "application"
   security_groups   = [aws_security_group.lb_sg.id]
-  subnets            = [aws_subnet.instance_subnet1.id, aws_subnet.instance_subnet2.id]
+  subnets            = module.lb_network_setup.virtual_subnet_ids #[aws_subnet.instance_subnet1.id, aws_subnet.instance_subnet2.id]
 }
 
 resource "aws_lb_target_group" "app_target_group" {
   name        = "app-target-group"
   port        = 80
   protocol    = "HTTP"
-  vpc_id      = aws_vpc.autoscale_vpc.id
+  vpc_id      = module.lb_network_setup.virtual_network_id #aws_vpc.autoscale_vpc.id
   health_check {
     interval            = 30
     path                = "/"
@@ -170,7 +155,7 @@ resource "aws_lb_target_group_attachment" "asg_attachment" {
 resource "aws_security_group" "lb_sg" {
   name        = "lb-security-group"
   description = "Allow HTTP traffic"
-  vpc_id = aws_vpc.autoscale_vpc.id
+  vpc_id = module.lb_network_setup.virtual_network_id #aws_vpc.autoscale_vpc.id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "lb_sq_ingress" {
@@ -183,8 +168,8 @@ resource "aws_vpc_security_group_ingress_rule" "lb_sq_ingress" {
 
 resource "aws_vpc_security_group_egress_rule" "lb_sq_egress" {
   security_group_id = aws_security_group.lb_sg.id
-  from_port   = 0
-  to_port     = 0
+  from_port   = -1
+  to_port     = -1
   ip_protocol    = "-1"
   cidr_ipv4 = "0.0.0.0/0"
 }
