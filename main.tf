@@ -22,7 +22,13 @@ module "instance_group" {
   vpc_zone_identifiers = [module.lb_network_setup.virtual_subnet_ids[0]]
   availability_zone = "${var.aws_region}a"
 }
-
+module "load_balancer" {
+  source = "./modules/load_balancer"
+  security_groups = [aws_security_group.lb_sg.id]
+  virtual_network = module.lb_network_setup.virtual_network_id
+  subnets = module.lb_network_setup.virtual_subnet_ids
+  instances = data.aws_instances.instances_in_subnet.ids
+}
 
 data "aws_instances" "instances_in_subnet" {
   filter {
@@ -31,58 +37,27 @@ data "aws_instances" "instances_in_subnet" {
   }
   depends_on = [module.instance_group.autoscale_group]
 }
-
-# output "instance_ids" {
-#   value = [for instance in data.aws_instances.instances_in_subnet : instance.private_dns]
-# }
-
-resource "aws_lb" "loadbalancer" {
-  name               = "app-lb"
-  internal           = false # no internet gateway error if false
-  load_balancer_type = "application"
-  security_groups   = [aws_security_group.lb_sg.id]
-  subnets            = module.lb_network_setup.virtual_subnet_ids #[aws_subnet.instance_subnet1.id, aws_subnet.instance_subnet2.id]
+moved {
+  from = aws_lb.loadbalancer
+  to = module.load_balancer.aws_lb.loadbalancer
 }
-
-resource "aws_lb_target_group" "app_target_group" {
-  name        = "app-target-group"
-  port        = 80
-  protocol    = "HTTP"
-  vpc_id      = module.lb_network_setup.virtual_network_id #aws_vpc.autoscale_vpc.id
-  health_check {
-    interval            = 30
-    path                = "/"
-    port                = "traffic-port"
-    protocol            = "HTTP"
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-  }
+moved {
+  from = aws_lb_target_group.app_target_group
+  to = module.load_balancer.aws_lb_target_group.app_target_group
 }
-
-resource "aws_lb_listener" "http_listener" {
-  load_balancer_arn = aws_lb.loadbalancer.arn
-  port              = "80"
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.app_target_group.arn
-  }
+moved {
+  from = aws_lb_listener.http_listener
+  to = module.load_balancer.aws_lb_listener.http_listener
 }
-
-resource "aws_lb_target_group_attachment" "asg_attachment" {
-  depends_on = [ data.aws_instances.instances_in_subnet ]
-  count = length(data.aws_instances.instances_in_subnet.ids)
-  target_group_arn = aws_lb_target_group.app_target_group.arn
-  target_id        = data.aws_instances.instances_in_subnet.ids[count.index]
-  port             = 80
+moved {
+  from = aws_lb_target_group_attachment.asg_attachment
+  to = module.load_balancer.aws_lb_target_group_attachment.asg_attachment
 }
 
 resource "aws_security_group" "lb_sg" {
   name        = "lb-security-group"
   description = "Allow HTTP traffic"
-  vpc_id = module.lb_network_setup.virtual_network_id #aws_vpc.autoscale_vpc.id
+  vpc_id = module.lb_network_setup.virtual_network_id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "lb_sq_ingress" {
@@ -102,6 +77,6 @@ resource "aws_vpc_security_group_egress_rule" "lb_sq_egress" {
 }
 
 output "load_balancer_url" {
-  value = aws_lb.loadbalancer.dns_name
+  value = module.load_balancer.load_balancer_url
 }
 
