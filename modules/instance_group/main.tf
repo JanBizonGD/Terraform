@@ -1,3 +1,9 @@
+provider "aws" {
+  shared_config_files      = ["${var.cred_location}/config"]
+  shared_credentials_files = ["${var.cred_location}/credentials"]
+  region = var.region
+}
+
 # === Instance ================================
 resource "aws_instance" "temp_vm" {
   ami           = var.image

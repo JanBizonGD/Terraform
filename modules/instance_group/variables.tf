@@ -1,3 +1,15 @@
+variable "region" {
+  description = "AWS region"
+  type = string
+  default = "us-east-1"
+}
+
+variable "cred_location" {
+  description = "Credential location to access cloud. It is a folder."
+  type = string
+  default = "/root/.aws"
+}
+
 variable "image" {
   default = "ami-04b4f1a9cf54c11d0" # Linux/ubuntu
 }
