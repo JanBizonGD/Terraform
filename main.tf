@@ -6,11 +6,11 @@ terraform {
     }
   }
 
-  backend "s3" {
-    bucket = "terr-05-03-2025"
-    key    = "terraform.tfstate"
-    region = "us-east-1"
-  }
+  # backend "s3" {
+  #   bucket = "terr-05-03-2025"
+  #   key    = "terraform.tfstate"
+  #   region = "us-east-1"
+  # }
 }
 
 provider "aws" {
