@@ -1,7 +1,7 @@
 provider "aws" {
   shared_config_files      = ["${var.cred_location}/config"]
   shared_credentials_files = ["${var.cred_location}/credentials"]
-  region = var.aws_region
+  region = var.region
 }
 
 # === VPC ======================================
@@ -13,12 +13,12 @@ resource "aws_vpc" "this" {
 resource "aws_subnet" "this" {
   vpc_id     = aws_vpc.this.id
   cidr_block = "10.0.1.0/24"
-  availability_zone = "${var.aws_region}a"
+  availability_zone = "${var.region}a"
 }
 resource "aws_subnet" "this2" {
   vpc_id     = aws_vpc.this.id
   cidr_block = "10.0.2.0/24"
-  availability_zone = "${var.aws_region}b"
+  availability_zone = "${var.region}b"
 }
 
 # === Gateway ======================================
